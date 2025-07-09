@@ -1,102 +1,104 @@
 import streamlit as st
 import pandas as pd
 import openai
-import io
-import os
 
-# 🔐 OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 st.set_page_config(page_title="Mini Jane", layout="wide")
 st.title("📊 Mini Jane – Energy File Analyzer")
 
 # ─────────────────────────────────────
-# 📚 Sidebar Controls
+# 📤 File Upload (Always Shown)
 # ─────────────────────────────────────
-st.sidebar.title("Mini Jane Controls")
+st.sidebar.header("📤 Step 1: Upload your data")
+uploaded_file = st.sidebar.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
 
-uploaded_file = st.sidebar.file_uploader("📤 Upload energy CSV or Excel", type=["csv", "xlsx"])
-
-prompt_type = st.sidebar.radio("📌 Choose your analysis focus:", [
-    "💼 Asset Management",
-    "📦 Energy Procurement",
-    "⚡ Demand Response"
-])
-
-# ─────────────────────────────────────
-# 🧠 Prompt Templates
-# ─────────────────────────────────────
-def get_prompt(csv_preview, focus):
-    if focus == "💼 Asset Management":
-        return f"""You are an energy analyst advising a real estate asset manager.
-Analyze this usage and cost data. Provide:
-- Key usage/cost patterns
-- Any anomalies in weekday vs weekend usage
-- Estimated annualized energy spend
-- Suggestions that could improve NOI through better energy use
-
-Stay concise and financial-focused.
-
-Data:
-{csv_preview}
-"""
-    elif focus == "📦 Energy Procurement":
-        return f"""You are an energy analyst advising a procurement manager.
-Analyze this energy usage data and suggest:
-- Better-fitting supply rate structures (flat, TOU, etc.)
-- Opportunities to renegotiate contracts
-- Cost trends or risk factors related to procurement decisions
-
-Be direct and sourcing-focused.
-
-Data:
-{csv_preview}
-"""
-    elif focus == "⚡ Demand Response":
-        return f"""You are a demand response program advisor.
-Analyze the energy usage data and provide:
-- Peak demand periods
-- Frequency and duration of load spikes
-- Opportunities to reduce or shift load for DR participation
-- Estimated potential earnings or benefits from joining DR programs
-
-Be technical and DR-focused.
-
-Data:
-{csv_preview}
-"""
-    else:
-        return "Invalid prompt selection."
-
-# ─────────────────────────────────────
-# 🧾 Main App Logic
-# ─────────────────────────────────────
+# Store file in session_state so it's accessible across tabs
 if uploaded_file:
     try:
         if uploaded_file.name.endswith(".csv"):
             df = pd.read_csv(uploaded_file)
         else:
             df = pd.read_excel(uploaded_file)
-
-        st.subheader("📄 Data Preview")
-        st.dataframe(df.head(20))
-
-        if st.button("🔍 Analyze with GPT"):
-            csv_preview = df.head(50).to_csv(index=False)
-            prompt = get_prompt(csv_preview, prompt_type)
-
-            with st.spinner("Analyzing with GPT-3.5..."):
-                response = openai.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a helpful energy analyst."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                analysis = response.choices[0].message.content
-
-            st.subheader("🧠 AI Insights")
-            st.write(analysis)
-
+        st.session_state.df = df
     except Exception as e:
-        st.error(f"❌ Oops! Could not process file: {e}")
+        st.error(f"Error processing file: {e}")
+
+# Show upload confirmation
+if "df" in st.session_state:
+    st.success("✅ File uploaded successfully.")
+    st.subheader("📄 Data Preview")
+    st.dataframe(st.session_state.df.head(20))
+
+    # Tabs for different analysis types
+    tab1, tab2, tab3 = st.tabs([
+        "💼 Asset Manager Analysis",
+        "📦 Energy Procurement",
+        "⚡ Demand Response"
+    ])
+
+    def run_analysis(prompt_text):
+        csv_preview = st.session_state.df.head(50).to_csv(index=False)
+        full_prompt = f"{prompt_text}\n\nData:\n{csv_preview}"
+        with st.spinner("Analyzing with GPT..."):
+            response = openai.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful energy analyst."},
+                    {"role": "user", "content": full_prompt}
+                ]
+            )
+            return response.choices[0].message.content
+
+    # Tab 1: Asset Manager
+    with tab1:
+        st.markdown("### 👤 Real Estate Asset Manager View")
+        if st.button("Run Asset Management Analysis"):
+            result = run_analysis(
+                """You are an energy analyst advising a real estate asset manager.
+Analyze this usage and cost data. Provide:
+- Key usage/cost patterns
+- Any anomalies in weekday vs weekend usage
+- Estimated annualized energy spend
+- Suggestions that could improve NOI through better energy use
+
+Be concise and financial-focused."""
+            )
+            st.subheader("🧠 GPT Insights")
+            st.write(result)
+
+    # Tab 2: Procurement
+    with tab2:
+        st.markdown("### 📦 Energy Procurement View")
+        if st.button("Run Procurement Analysis"):
+            result = run_analysis(
+                """You are an energy analyst advising a procurement manager.
+Analyze this energy usage data and suggest:
+- Better-fitting supply rate structures (flat, TOU, etc.)
+- Opportunities to renegotiate contracts
+- Cost trends or risk factors related to procurement decisions
+
+Be direct and sourcing-focused."""
+            )
+            st.subheader("🧠 GPT Insights")
+            st.write(result)
+
+    # Tab 3: Demand Response
+    with tab3:
+        st.markdown("### ⚡ Demand Response Strategy")
+        if st.button("Run Demand Response Analysis"):
+            result = run_analysis(
+                """You are a demand response advisor analyzing a building’s energy profile.
+Provide:
+- Peak demand periods
+- Opportunities to reduce or shift load
+- Recommendations for DR participation
+- Potential earnings if enrolled in DR
+
+Be technical and DR-focused."""
+            )
+            st.subheader("🧠 GPT Insights")
+            st.write(result)
+
+else:
+    st.warning("👈 Please upload a file first to view the analysis tabs.")
