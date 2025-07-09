@@ -4,7 +4,7 @@ import openai
 import io
 import os
 
-# ✅ OpenAI key from Streamlit secrets
+# ✅ OpenAI key from Streamlit secrets (add it in Settings → Secrets)
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 st.set_page_config(page_title="Mini Jane", layout="wide")
@@ -14,17 +14,19 @@ uploaded_file = st.file_uploader("Upload your energy CSV or Excel file", type=["
 
 if uploaded_file:
     try:
+        # Read the file into a DataFrame
         if uploaded_file.name.endswith(".csv"):
             df = pd.read_csv(uploaded_file)
         else:
             df = pd.read_excel(uploaded_file)
 
-        st.subheader("Data Preview")
+        st.subheader("📄 Data Preview")
         st.dataframe(df.head(20))
 
+        # Analyze with GPT on button click
         if st.button("🔍 Analyze with GPT"):
-    csv_preview = df.head(50).to_csv(index=False)
-    prompt = f"""You are an energy analyst advising a real estate asset manager.
+            csv_preview = df.head(50).to_csv(index=False)
+            prompt = f"""You are an energy analyst advising a real estate asset manager.
 Analyze this usage and cost data. Provide:
 - Key usage/cost patterns
 - Any anomalies in weekday vs weekend usage
@@ -36,7 +38,8 @@ Stay concise and financial-focused.
 Data:
 {csv_preview}
 """
-            with st.spinner("Analyzing with GPT-4..."):
+
+            with st.spinner("Analyzing with GPT-3.5..."):
                 response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
@@ -50,4 +53,4 @@ Data:
             st.write(analysis)
 
     except Exception as e:
-        st.error(f"Oops! Could not process file: {e}")
+        st.error(f"❌ Oops! Could not process file: {e}")
