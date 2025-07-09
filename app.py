@@ -23,14 +23,19 @@ if uploaded_file:
         st.dataframe(df.head(20))
 
         if st.button("🔍 Analyze with GPT"):
-            csv_preview = df.head(50).to_csv(index=False)
-            prompt = f"""You are an energy analyst.
-Analyze this data and give insights about energy use trends, costs, peaks, anomalies, and optimization opportunities. Be specific and helpful.
+    csv_preview = df.head(50).to_csv(index=False)
+    prompt = f"""You are an energy analyst advising a real estate asset manager.
+Analyze this usage and cost data. Provide:
+- Key usage/cost patterns
+- Any anomalies in weekday vs weekend usage
+- Estimated annualized energy spend
+- Suggestions that could improve NOI through better energy use
+
+Stay concise and financial-focused.
 
 Data:
 {csv_preview}
 """
-
             with st.spinner("Analyzing with GPT-4..."):
                 response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
