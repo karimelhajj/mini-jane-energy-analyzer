@@ -17,7 +17,6 @@ uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xls
 if uploaded_file:
     st.success(f"✅ File '{uploaded_file.name}' received!")
 
-
 # Store file in session_state so it's accessible across tabs
 if uploaded_file:
     try:
@@ -43,8 +42,15 @@ if "df" in st.session_state:
     ])
 
     def run_analysis(prompt_text):
-        csv_preview = st.session_state.df.head(50).to_csv(index=False)
-        full_prompt = f"{prompt_text}\n\nData:\n{csv_preview}"
+        csv_preview = st.session_state.df.head(100).to_csv(index=False)
+        full_prompt = f"""{prompt_text}
+
+If the data includes buildings, cities, or locations, please reference them directly in your analysis.
+Call out any buildings or sites with unusual usage or cost behavior.
+
+Data:
+{csv_preview}
+"""
         with st.spinner("Analyzing with GPT..."):
             response = openai.chat.completions.create(
                 model="gpt-3.5-turbo",
