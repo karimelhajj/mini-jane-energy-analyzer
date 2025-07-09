@@ -10,8 +10,13 @@ st.title("📊 Mini Jane – Energy File Analyzer")
 # ─────────────────────────────────────
 # 📤 File Upload (Always Shown)
 # ─────────────────────────────────────
-st.sidebar.header("📤 Step 1: Upload your data")
-uploaded_file = st.sidebar.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
+st.markdown("### 📤 Step 1: Upload your energy data")
+uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
+
+# Show confirmation
+if uploaded_file:
+    st.success(f"✅ File '{uploaded_file.name}' received!")
+
 
 # Store file in session_state so it's accessible across tabs
 if uploaded_file:
