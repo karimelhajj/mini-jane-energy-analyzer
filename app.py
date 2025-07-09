@@ -7,8 +7,8 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 st.set_page_config(page_title="Mini Jane", layout="wide")
 st.title("📊 Mini Jane – Energy File Analyzer")
 
-# 📄 File Upload (Always Shown)
-st.markdown("### 📄 Step 1: Upload your energy data")
+# 📤 File Upload (Always Shown)
+st.markdown("### 📤 Step 1: Upload your energy data")
 uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
 
 if uploaded_file:
@@ -28,9 +28,9 @@ if uploaded_file:
 if "df" in st.session_state:
     st.success("✅ File uploaded successfully.")
     st.subheader("📄 Data Preview")
-    st.dataframe(st.session_state.df.head(20))
+    st.dataframe(st.session_state.df.head(50))
 
-    # 📊 Charts Section
+    # 📈 Charts Section
     st.subheader("📈 Usage & Cost Charts")
     df = st.session_state.df.copy()
 
@@ -66,10 +66,11 @@ if "df" in st.session_state:
         st.scatter_chart(building_summary.rename(columns={usage_col: "Usage", "Cost": "Cost"}))
 
     # Tabs for different analysis types
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "💼 Asset Manager Analysis",
         "📦 Energy Procurement",
-        "⚡ Demand Response"
+        "⚡ Demand Response",
+        "🚀 Next Best Actions"
     ])
 
     def run_analysis(prompt_text):
@@ -140,6 +141,24 @@ Provide:
 Be technical and DR-focused."""
             )
             st.subheader("🧠 GPT Insights")
+            st.write(result)
+
+    # Tab 4: Next Best Actions
+    with tab4:
+        st.markdown("### 🚀 Investment Memo: Next Best Actions")
+        if st.button("Generate Next Best Actions"):
+            result = run_analysis(
+                """You are writing an investment memo for a sustainability director at a commercial real estate firm.
+Based on the following usage and cost data, recommend the top 3 investment actions they should consider.
+Each recommendation should include:
+- The building(s) or site(s) it applies to
+- Estimated impact or savings
+- A short explanation of why it's important
+- Suggested timeframe (immediate / short term / long term)
+
+Use clear bullet points or sections so this can be copied into a board presentation."""
+            )
+            st.subheader("📋 Recommended Investment Actions")
             st.write(result)
 
 else:
