@@ -7,17 +7,14 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 st.set_page_config(page_title="Mini Jane", layout="wide")
 st.title("📊 Mini Jane – Energy File Analyzer")
 
-# ─────────────────────────────────────
-# 📤 File Upload (Always Shown)
-# ─────────────────────────────────────
-st.markdown("### 📤 Step 1: Upload your energy data")
+# 📄 File Upload (Always Shown)
+st.markdown("### 📄 Step 1: Upload your energy data")
 uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
 
-# Show confirmation
 if uploaded_file:
     st.success(f"✅ File '{uploaded_file.name}' received!")
 
-# Store file in session_state so it's accessible across tabs
+# Store file in session_state
 if uploaded_file:
     try:
         if uploaded_file.name.endswith(".csv"):
@@ -28,11 +25,45 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Error processing file: {e}")
 
-# Show upload confirmation
 if "df" in st.session_state:
     st.success("✅ File uploaded successfully.")
     st.subheader("📄 Data Preview")
     st.dataframe(st.session_state.df.head(20))
+
+    # 📊 Charts Section
+    st.subheader("📈 Usage & Cost Charts")
+    df = st.session_state.df.copy()
+
+    # Parse date column if possible
+    for col in df.columns:
+        if "date" in col.lower():
+            try:
+                df[col] = pd.to_datetime(df[col])
+                df = df.sort_values(by=col)
+            except:
+                pass
+
+    # Line chart: total usage over time
+    if "Usage" in df.columns or "Usage_kWh" in df.columns:
+        usage_col = "Usage" if "Usage" in df.columns else "Usage_kWh"
+        date_col = next((c for c in df.columns if "date" in c.lower()), None)
+
+        if date_col:
+            st.markdown("**🔹 Total Usage Over Time**")
+            usage_chart_data = df.groupby(date_col)[usage_col].sum()
+            st.line_chart(usage_chart_data)
+
+    # Bar chart: total usage by building
+    if "Building" in df.columns:
+        st.markdown("**🏢 Total Usage by Building**")
+        usage_by_building = df.groupby("Building")[usage_col].sum().sort_values(ascending=False)
+        st.bar_chart(usage_by_building)
+
+    # Scatterplot: cost vs usage
+    if "Cost" in df.columns and "Building" in df.columns:
+        st.markdown("**💸 Cost vs Usage by Building**")
+        building_summary = df.groupby("Building")[[usage_col, "Cost"]].sum()
+        st.scatter_chart(building_summary.rename(columns={usage_col: "Usage", "Cost": "Cost"}))
 
     # Tabs for different analysis types
     tab1, tab2, tab3 = st.tabs([
@@ -112,4 +143,4 @@ Be technical and DR-focused."""
             st.write(result)
 
 else:
-    st.warning("👈 Please upload a file first to view the analysis tabs.")
+    st.warning("👈 Please upload a file first to view charts and run analysis.")
